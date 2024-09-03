@@ -3,20 +3,18 @@ from app.config import db
 from google.cloud.firestore_v1 import SERVER_TIMESTAMP
 from firebase_admin import firestore
 
-def save_detection_to_db(Type, latitud, longitud, image_urls, comments, description, title, user, comuna, id_categoria):
+def save_detection_to_db(Type, comentariosid, comuna, image_urls, cordenadas, description, title, iconMarkerId):
     detection_ref = db.collection('alerta')
     detection_ref.add({
         'Type': Type,
-        'latitud': latitud,
-        'longitud': longitud,
+        'comentariosID': comentariosid,
+        'comuna': comuna,
         'image_urls': image_urls,  # Guardar la lista de URLs
-        'comments': comments,
+        'cordenadas': cordenadas,
         'description': description,
         'fecha': firestore.SERVER_TIMESTAMP,
         'title': title,
-        'user': user,
-        'comuna': comuna,
-        'id_categoria': id_categoria
+        'iconMarkerid': iconMarkerId,
     })
 
 def get_all_detections():
