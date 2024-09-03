@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+import random
 import base64
 from utils.database import save_detection_to_db, get_all_detections
 from app.config import bucket, db 
@@ -26,18 +27,23 @@ def get_comuna(lat, lon):
 @api_bp.route('/add_detecciones', methods=['POST'])
 def add_detection():
     data = request.get_json()
-
     latitud = data.get('latitud')
     longitud = data.get('longitud')
     image_data_list = data.get('image_data')  # Lista de imágenes en base64
     description = data.get('description')
-    id_categoria = data.get('id_categoria')
+
+    tipos_alerta = ['Choque', 'Fuego', 'Pelea', 'Robo', 'Vandalismo']
+    tipo_alerta = random.choice(tipos_alerta)
+
+    # Obtener el iconMarkerId correspondiente al tipo de alerta
+    iconMarkerId = obtener_icon_marker_id(tipo_alerta)
 
     # Validar que se ha enviado una lista de imágenes
     if not isinstance(image_data_list, list):
         return jsonify({"error": "Las imágenes deben ser enviadas en una lista"}), 400
 
     comuna = get_comuna(latitud, longitud)
+    coordenadas = [latitud, longitud]
     urls = []
 
     for image_data in image_data_list:
@@ -56,16 +62,26 @@ def add_detection():
         image_url = blob.public_url
         urls.append(image_url)
 
-    # Otros campos de la detección
-    comments = "Alertar a los vecinos!"
-    Type = "Vandalismo"
-    title = "Vandalismo"
-    user = "Jorge"
-
     # Guardar la detección en la base de datos con las URLs de las imágenes
-    save_detection_to_db(Type, latitud, longitud, urls, comments, description, title, user, comuna, id_categoria)
+    save_detection_to_db(tipo_alerta, [], comuna, urls, coordenadas, description, tipo_alerta, iconMarkerId)
 
     return jsonify({"message": "Detecciones guardadas con éxito", "image_urls": urls})
+
+# Función para obtener el iconMarkerId desde Firebase
+def obtener_icon_marker_id(tipo_alerta):
+    try:
+        # Consulta a Firebase para obtener el iconMarker correspondiente al tipo de alerta
+        icon_markers_ref = db.collection('iconMarkers')
+        query = icon_markers_ref.where('type', '==', tipo_alerta).stream()
+
+        for doc in query:
+            return doc.id  # Retorna el primer ID encontrado para el tipo de alerta
+
+        raise Exception(f"No se encontró un iconMarker para el tipo {tipo_alerta}")
+
+    except Exception as e:
+        print(f"Error al obtener el iconMarkerid: {e}")
+        return None
 
 @api_bp.route('/detections', methods=['GET'])
 def get_detections():
