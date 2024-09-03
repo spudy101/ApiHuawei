@@ -27,10 +27,10 @@ def get_comuna(lat, lon):
 def add_detection():
     data = request.get_json()
 
-    descripcion = data.get('descripcion')
     latitud = data.get('latitud')
     longitud = data.get('longitud')
     image_data_list = data.get('image_data')  # Lista de imágenes en base64
+    description = data.get('description')
     id_categoria = data.get('id_categoria')
 
     # Validar que se ha enviado una lista de imágenes
@@ -56,24 +56,14 @@ def add_detection():
         image_url = blob.public_url
         urls.append(image_url)
 
-    # Verificar si hay detecciones cercanas recientes de la misma categoría
-    detection_ref = db.collection('deteccion')
-    query_time = datetime.now() - timedelta(hours=1)
-    detecciones_recientes = detection_ref \
-        .where('id_categoria', '==', id_categoria) \
-        .where('fecha', '>=', query_time).stream()
+    # Otros campos de la detección
+    comments = "Alertar a los vecinos!"
+    Type = "Vandalismo"
+    title = "Vandalismo"
+    user = "Jorge"
 
-    for deteccion in detecciones_recientes:
-        data = deteccion.to_dict()
-        coord_1 = (latitud, longitud)
-        coord_2 = (float(data['latitud']), float(data['longitud']))
-        distancia = geodesic(coord_1, coord_2).km
-
-        if distancia <= 1:  # Si está a menos de 1 km de distancia
-            return jsonify({"error": "Ya existe una detección reciente en esta área."}), 400
-
-    # Guardar la detección en la base de datos con todas las URLs públicas y el id_categoria
-    save_detection_to_db(descripcion, latitud, longitud, urls, id_categoria, comuna)
+    # Guardar la detección en la base de datos con las URLs de las imágenes
+    save_detection_to_db(Type, latitud, longitud, urls, comments, description, title, user, comuna, id_categoria)
 
     return jsonify({"message": "Detecciones guardadas con éxito", "image_urls": urls})
 
