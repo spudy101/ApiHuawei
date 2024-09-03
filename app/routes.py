@@ -5,17 +5,23 @@ from app.config import bucket, db
 from datetime import datetime, timedelta
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderInsufficientPrivileges, GeocoderServiceError
 
 api_bp = Blueprint('api', __name__)
 
 def get_comuna(lat, lon):
-    geolocator = Nominatim(user_agent="geoapiExercises")
-    location = geolocator.reverse((lat, lon), exactly_one=True)
-    address = location.raw['address']
-    
-    comuna = address.get('city_district', None) or address.get('suburb', None) or address.get('town', None)
-    
-    return comuna
+    try:
+        geolocator = Nominatim(user_agent="nombre_de_tu_aplicacion")
+        location = geolocator.reverse((lat, lon), exactly_one=True)
+        address = location.raw['address']
+        comuna = address.get('city_district', None) or address.get('suburb', None) or address.get('town', None)
+        return comuna
+    except GeocoderInsufficientPrivileges as e:
+        print(f"Error de privilegios insuficientes: {e}")
+        return None
+    except GeocoderServiceError as e:
+        print(f"Error del servicio de geocodificación: {e}")
+        return None
 
 @api_bp.route('/add_detecciones', methods=['POST'])
 def add_detection():
