@@ -24,6 +24,14 @@ def get_all_detections():
     for doc in docs:
         data = doc.to_dict()
 
+        # Convertir GeoPoint a un diccionario con latitud y longitud
+        if isinstance(data.get('cordenadas'), firestore.GeoPoint):
+            geo_point = data['cordenadas']
+            data['cordenadas'] = {
+                'latitud': geo_point.latitude,
+                'longitud': geo_point.longitude
+            }
+
         detections.append(data)
 
     return detections

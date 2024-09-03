@@ -67,21 +67,20 @@ def add_detection():
 
     return jsonify({"message": "Detecciones guardadas con éxito", "image_urls": urls})
 
-# Función para obtener el iconMarkerId desde Firebase
 def obtener_icon_marker_id(tipo_alerta):
     try:
         # Consulta a Firebase para obtener el iconMarker correspondiente al tipo de alerta
-        icon_markers_ref = db.collection('iconMarkers')
+        icon_markers_ref = db.collection('iconMarker')
         query = icon_markers_ref.where('type', '==', tipo_alerta).stream()
 
         for doc in query:
             return doc.id  # Retorna el primer ID encontrado para el tipo de alerta
 
-        raise Exception(f"No se encontró un iconMarker para el tipo {tipo_alerta}")
+        raise ValueError(f"No se encontró un iconMarker para el tipo {tipo_alerta}")
 
     except Exception as e:
-        print(f"Error al obtener el iconMarkerid: {e}")
-        return None
+        print(f"Error al obtener el iconMarkerId: {e}")
+        return "default_icon_id"  # Retorna un ID por defecto si no se encuentra el icono
 
 @api_bp.route('/detections', methods=['GET'])
 def get_detections():
