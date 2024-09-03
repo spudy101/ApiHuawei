@@ -30,27 +30,31 @@ def add_detection():
     descripcion = data.get('descripcion')
     latitud = data.get('latitud')
     longitud = data.get('longitud')
-    image_data = data.get('image_data')
+    image_data_list = data.get('image_data')  # Lista de imágenes en base64
     id_categoria = data.get('id_categoria')
 
-    if not image_data:
-        return jsonify({"error": "No se ha enviado imagen"}), 400
+    # Validar que se ha enviado una lista de imágenes
+    if not isinstance(image_data_list, list):
+        return jsonify({"error": "Las imágenes deben ser enviadas en una lista"}), 400
 
     comuna = get_comuna(latitud, longitud)
-    
-    # Decodificar la imagen
-    image_bytes = base64.b64decode(image_data)
-    image_name = f"detected_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+    urls = []
 
-    # Crear un blob en el bucket y subir la imagen
-    blob = bucket.blob(image_name)
-    blob.upload_from_string(image_bytes, content_type='image/jpeg')
+    for image_data in image_data_list:
+        # Decodificar la imagen
+        image_bytes = base64.b64decode(image_data)
+        image_name = f"detected_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
 
-    # Hacer que la imagen sea pública
-    blob.make_public()
+        # Crear un blob en el bucket y subir la imagen
+        blob = bucket.blob(image_name)
+        blob.upload_from_string(image_bytes, content_type='image/jpeg')
 
-    # Obtener la URL pública
-    image_url = blob.public_url
+        # Hacer que la imagen sea pública
+        blob.make_public()
+
+        # Obtener la URL pública
+        image_url = blob.public_url
+        urls.append(image_url)
 
     # Verificar si hay detecciones cercanas recientes de la misma categoría
     detection_ref = db.collection('deteccion')
@@ -68,11 +72,10 @@ def add_detection():
         if distancia <= 1:  # Si está a menos de 1 km de distancia
             return jsonify({"error": "Ya existe una detección reciente en esta área."}), 400
 
-    # Guardar la detección en la base de datos con la URL pública y el id_categoria
-    save_detection_to_db(descripcion, latitud, longitud, image_url, id_categoria, comuna)
+    # Guardar la detección en la base de datos con todas las URLs públicas y el id_categoria
+    save_detection_to_db(descripcion, latitud, longitud, urls, id_categoria, comuna)
 
-    return jsonify({"message": "Detección guardada con éxito", "image_url": image_url})
-
+    return jsonify({"message": "Detecciones guardadas con éxito", "image_urls": urls})
 
 @api_bp.route('/detections', methods=['GET'])
 def get_detections():
